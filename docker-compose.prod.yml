@@ -1,0 +1,50 @@
+version: '3.8'
+
+# This file is used ONLY on the EC2 server. Unlike docker-compose.yml (used on
+# your laptop), it does NOT build images — it pulls already-built images from
+# GitHub Container Registry (GHCR), the ones your GitHub Actions pipeline
+# builds and pushes on every push to main.
+#
+# IMPORTANT: replace YOUR_GITHUB_USERNAME below with your actual lowercase
+# GitHub username before using this file — GHCR image names must be lowercase.
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/alishbarana/pulseboard-backend:latest
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: pulseboard
+
+  frontend:
+    image: ghcr.io/alishbarana/pulseboard-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mysql_data:
