@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/pulseboard
+            cd ~/tracker
             git pull origin main
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
             docker compose -f docker-compose.prod.yml pull
