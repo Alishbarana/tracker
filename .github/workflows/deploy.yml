@@ -1,16 +1,13 @@
 name: Build and Deploy PulseBoard
 
-# Runs automatically every time you push to the main branch
 on:
   push:
     branches: [main]
 
 env:
   REGISTRY: ghcr.io
-  # ${{ github.repository_owner }} is automatically your GitHub username —
-  # no need to hardcode it, GitHub fills this in for you.
-BACKEND_IMAGE: ghcr.io/alishbarana/pulseboard-backend
-FRONTEND_IMAGE: ghcr.io/alishbarana/pulseboard-frontend
+  BACKEND_IMAGE: ghcr.io/alishbarana/pulseboard-backend
+  FRONTEND_IMAGE: ghcr.io/alishbarana/pulseboard-frontend
 
 jobs:
 
