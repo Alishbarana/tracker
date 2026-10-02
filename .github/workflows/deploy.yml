@@ -11,43 +11,79 @@ env:
 
 jobs:
 
-  # ---- Job 1: build both Docker images and push them to GHCR ----
+  # ---- Job 1: Build, scan, and push both Docker images ----
   build-and-push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
-      packages: write   # required to push to GHCR
+      packages: write
+
     steps:
+      # Checkout repository
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      # Login to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          # Note: GITHUB_TOKEN is provided automatically by GitHub Actions
-          # for every workflow run — you don't create this secret yourself.
 
-      - name: Build and push backend image
+      # ---------------- BACKEND ----------------
+
+      # Build backend Docker image
+      - name: Build backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          push: true
+          load: true
           tags: ${{ env.BACKEND_IMAGE }}:latest
 
-      - name: Build and push frontend image
+      # Scan backend image with Trivy
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}:latest
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Push backend image only if Trivy passes
+      - name: Push backend image
+        run: docker push ${{ env.BACKEND_IMAGE }}:latest
+
+      # ---------------- FRONTEND ----------------
+
+      # Build frontend Docker image
+      - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          push: true
+          load: true
           tags: ${{ env.FRONTEND_IMAGE }}:latest
+
+      # Scan frontend image with Trivy
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:latest
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Push frontend image only if Trivy passes
+      - name: Push frontend image
+        run: docker push ${{ env.FRONTEND_IMAGE }}:latest
+
 
   # ---- Job 2: SSH into EC2 and redeploy with the new images ----
   deploy:
-    needs: build-and-push   # only runs if the build/push job succeeded
+    needs: build-and-push
     runs-on: ubuntu-latest
+
     steps:
       - name: Deploy to EC2 over SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -55,10 +91,16 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+
           script: |
             cd ~/tracker
+
             git pull origin main
+
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
+
             docker compose -f docker-compose.prod.yml pull
+
             docker compose -f docker-compose.prod.yml up -d
+
             docker image prune -f
