@@ -14,6 +14,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Update Alpine security packages
+RUN apk update && apk upgrade
+
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
