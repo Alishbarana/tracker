@@ -42,6 +42,20 @@ jobs:
           load: true
           tags: ${{ env.BACKEND_IMAGE }}:latest
 
+      # Inspect Node, npm, and sigstore package
+      - name: Inspect npm sigstore package
+        run: |
+          docker run --rm ${{ env.BACKEND_IMAGE }} sh -c '
+            echo "Node version:"
+            node --version
+
+            echo "NPM version:"
+            npm --version
+
+            echo "Sigstore package:"
+            find /usr/local/lib/node_modules/npm -path "*/sigstore/package.json" -print 2>/dev/null
+          '
+
       # Scan backend image with Trivy
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -58,6 +72,7 @@ jobs:
       # ---------------- FRONTEND ----------------
 
       # Build frontend Docker image
+      - name: Build frontend image
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
