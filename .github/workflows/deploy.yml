@@ -20,6 +20,7 @@ jobs:
       packages: write
 
     steps:
+
       # Checkout repository
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -72,7 +73,6 @@ jobs:
       # ---------------- FRONTEND ----------------
 
       # Build frontend Docker image
-      - name: Build frontend image
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
